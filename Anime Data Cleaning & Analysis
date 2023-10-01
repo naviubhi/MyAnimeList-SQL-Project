@@ -1,4 +1,4 @@
---Looking at the data as a whole
+--Looking at the dataset as a whole
 SELECT *
 FROM Anime..AnimeData;
 
@@ -61,7 +61,7 @@ ADD  end_date_formatted DATE;
 UPDATE Anime..AnimeData
 SET end_date_formatted = CAST(end_date as DATE);
 
----Formatting the Season column to show ONLY the season
+---Formatting the Season column to show ONLY the season (not including the year)
 UPDATE Anime..AnimeData
 SET season = SUBSTRING(Season, 1, CHARINDEX(' ', Season) - 1)
 WHERE CHARINDEX(' ', season) > 0;
@@ -70,7 +70,6 @@ WHERE CHARINDEX(' ', season) > 0;
 
 --Dealing with NULL values
 ---Removing rows where SCORE = NULL and STATUS = finished_airing
----- this gives no meaningful info such that the score, popularity, and favorites are extremely low or 0, considering they finished airing
 SELECT *
 FROM Anime..AnimeData
 WHERE score IS NULL AND status = 'Finished Airing'
@@ -79,7 +78,7 @@ ORDER BY favorites_count DESC;
 DELETE FROM Anime..AnimeData
 WHERE score IS NULL AND status = 'Finished Airing';
 
---Doing the same thing with animes currently airing, but only where favorities is 0
+--Removing rows where Score = NULL and Status = Currently Airing and favorites_count = 0
 SELECT *
 FROM Anime..AnimeData
 WHERE score IS NULL AND status = 'Currently Airing' AND favorites_count = 0;
@@ -87,7 +86,7 @@ WHERE score IS NULL AND status = 'Currently Airing' AND favorites_count = 0;
 DELETE FROM Anime..AnimeData
 WHERE score IS NULL AND status = 'Currently Airing' AND favorites_count = 0;
 
---Get rid of not yet aired where favorities is 0 - not really relevant or meaningful
+--Removing rows where Score = NULL and Status = Not Yet Aired and favorites_count = 0
 SELECT *
 FROM Anime..AnimeData
 WHERE score IS NULL AND status = 'Not yet Aired' AND favorites_count = 0;
@@ -95,7 +94,7 @@ WHERE score IS NULL AND status = 'Not yet Aired' AND favorites_count = 0;
 DELETE FROM Anime..AnimeData
 WHERE score IS NULL AND status = 'Not yet Aired' AND favorites_count = 0;
 
---Fill in NULL values in season column based on start date column
+--Filling in NULL values in season column based on start date column
 UPDATE Anime..AnimeData
 SET season = CASE
     WHEN MONTH(start_date_formatted) IN (1, 2, 3) THEN 'Winter'
@@ -114,13 +113,13 @@ FROM Anime..AnimeData
 ORDER BY score DESC;
 
 --Breaking it down by Type
----Top rated Movie
+---Top 10 rated Movies
 SELECT TOP 10 title, score, type
 FROM Anime..AnimeData
 WHERE type = 'movie' AND score IS NOT NULL
 ORDER BY score DESC;
 
----Top rated TV show
+---Top 10 rated TV shows
 SELECT TOP 10 title, score, type
 FROM Anime..AnimeData
 WHERE type = 'TV' AND score IS NOT NULL
@@ -128,7 +127,7 @@ ORDER BY score DESC;
 
 ---------------------------------------------------------------------------------
 
---Number of animes airing based on Season of the year (most saturated season of the year for new animes)
+--Number of animes airing based on Season of the year
 SELECT season, COUNT(*) AS num_animes_aired, ROUND((COUNT(*) * 100) / SUM(COUNT(*)) OVER (), 2) AS percentage
 FROM Anime..AnimeData
 WHERE season IS NOT NULL
@@ -170,7 +169,7 @@ ORDER BY GenreCount DESC;
 
 ---------------------------------------------------------------------------------
 
---Looking at the trends in genre popularity over different seasons in the year
+--Looking at the trends in genre popularity over different seasons in a year
 SELECT
     season AS Season,
     s.value AS Genre,
@@ -183,7 +182,7 @@ ORDER BY season, AnimeCount DESC;
 
 ---------------------------------------------------------------------------------
 
---Genre popularity over 'all time' - 1917 - 2023
+--Genre popularity over 'all time' - 1917 to 2023
 SELECT
     a.season,
     YEAR(a.start_date_formatted) AS Year,
@@ -197,7 +196,7 @@ ORDER BY a.season, Year, AnimeCount DESC;
 
 ---------------------------------------------------------------------------------
 
---Genres gaining popularity by looking at animes that are not yet aired
+--Looking at genres gaining popularity based on animes that are not aired yet
 SELECT
     s.value AS Genre,
     COUNT(*) AS AnimeCount
@@ -223,7 +222,7 @@ ORDER BY StudioCount DESC;
 
 ---------------------------------------------------------------------------------
 
---What is the most popular studio in the top 50 rated anime?
+--What is the most popular studio in the top 50 highest rated anime?
 WITH Top50Anime AS (
     SELECT TOP 50 title, score, studios
     FROM Anime..AnimeData
@@ -262,7 +261,7 @@ ORDER BY AverageRating DESC;
 
 ---------------------------------------------------------------------------------
 
---Looking at which genre attracts most user engagment based on plan to watch count
+--Looking at which genre attracts most user engagment based on the plan to watch count
 WITH Genre AS (
     SELECT
         s.value AS Genre,
