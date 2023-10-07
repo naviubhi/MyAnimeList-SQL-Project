@@ -1,4 +1,4 @@
---Looking at the dataset as a whole
+--Looking at the data as a whole
 SELECT *
 FROM Anime..AnimeData;
 
@@ -38,31 +38,30 @@ DROP COLUMN main_pic
 			, members_count
 			, source_type
 			, synopsis
-
 ---------------------------------------------------------------------------------
 
 --Dealing with Date and Time formatting
----Formatting Start Date
+---Formatting the Start Date
 SELECT CAST(start_date as DATE) AS start_date_formatted
 FROM Anime..AnimeData;
 
 ALTER TABLE Anime..AnimeData
-ADD  start_date_formatted DATE;
+ADD start_date_formatted DATE;
 
 UPDATE Anime..AnimeData
 SET start_date_formatted = CAST(start_date as DATE);
 
----Formatting End Date
+---Formatting the End Date
 SELECT CAST(end_date as DATE) AS end_date_formatted
 FROM Anime..AnimeData;
 
 ALTER TABLE Anime..AnimeData
-ADD  end_date_formatted DATE;
+ADD end_date_formatted DATE;
 
 UPDATE Anime..AnimeData
 SET end_date_formatted = CAST(end_date as DATE);
 
----Formatting the Season column to show ONLY the season (not including the year)
+---Formatting the Season column to show ONLY the season
 UPDATE Anime..AnimeData
 SET season = SUBSTRING(Season, 1, CHARINDEX(' ', Season) - 1)
 WHERE CHARINDEX(' ', season) > 0;
@@ -95,7 +94,7 @@ WHERE score IS NULL AND status = 'Not yet Aired' AND favorites_count = 0;
 DELETE FROM Anime..AnimeData
 WHERE score IS NULL AND status = 'Not yet Aired' AND favorites_count = 0;
 
---Filling in NULL values in season column based on start date column
+--Fill in NULL values in season column based on start date column
 UPDATE Anime..AnimeData
 SET season = CASE
     WHEN MONTH(start_date_formatted) IN (1, 2, 3) THEN 'Winter'
@@ -108,19 +107,39 @@ WHERE season IS NULL;
 
 ---------------------------------------------------------------------------------
 
---What are the top 10 highest rated anime?
+--Creating a temp table so that each genre is considered separately for counting and analysis
+WITH SplitGenres AS (
+    SELECT anime_id, TRIM(value) AS Genre
+    FROM Anime..AnimeData
+    CROSS APPLY STRING_SPLIT(Genres, '|')
+    WHERE Genres IS NOT NULL
+)
+SELECT * FROM SplitGenres
+
+--Creating a temp table so that each studio is considered separately for counting and analysis
+WITH SplitStudios AS (
+    SELECT anime_id, TRIM(value) AS Studio, score
+    FROM Anime..AnimeData
+    CROSS APPLY STRING_SPLIT(studios, '|')
+    WHERE studios IS NOT NULL
+)
+SELECT * FROM SplitStudios
+
+---------------------------------------------------------------------------------
+
+--What are the top 10 highest-rated anime?
 SELECT TOP 10 title, score
 FROM Anime..AnimeData
 ORDER BY score DESC;
 
 --Breaking it down by Type
----Top 10 rated Movies
+---Top-rated Movie
 SELECT TOP 10 title, score, type
 FROM Anime..AnimeData
 WHERE type = 'movie' AND score IS NOT NULL
 ORDER BY score DESC;
 
----Top 10 rated TV shows
+---Top-rated TV show
 SELECT TOP 10 title, score, type
 FROM Anime..AnimeData
 WHERE type = 'TV' AND score IS NOT NULL
@@ -128,7 +147,7 @@ ORDER BY score DESC;
 
 ---------------------------------------------------------------------------------
 
---Number of animes airing based on Season of the year
+--Number of animes airing based on Season of the year (most saturated season of the year for new animes)
 SELECT season, COUNT(*) AS num_animes_aired, ROUND((COUNT(*) * 100) / SUM(COUNT(*)) OVER (), 2) AS percentage
 FROM Anime..AnimeData
 WHERE season IS NOT NULL
@@ -137,8 +156,30 @@ ORDER BY num_animes_aired DESC;
 
 ---------------------------------------------------------------------------------
 
---What is the most popular genre?
-SELECT TOP 1 Genre, COUNT(*) AS GenreCount
+--How many distinct genres are there and what are they?
+SELECT DISTINCT Genre
+FROM (
+    SELECT value AS Genre
+    FROM Anime..AnimeData
+    CROSS APPLY STRING_SPLIT(Genres, '|')
+    WHERE Genres IS NOT NULL
+) AS GenreSplit;
+
+---------------------------------------------------------------------------------
+
+--How many distinct studios are there and what are they?
+SELECT DISTINCT Studio
+FROM (
+    SELECT value AS Studio
+    FROM Anime..AnimeData
+    CROSS APPLY STRING_SPLIT(studios, '|')
+    WHERE studios IS NOT NULL
+) AS StudioSplit;
+
+---------------------------------------------------------------------------------
+
+--What is the most popular genre for an anime to be created in?
+SELECT TOP 10 Genre, COUNT(*) AS GenreCount
 FROM (
     SELECT value AS Genre
     FROM Anime..AnimeData
@@ -170,7 +211,7 @@ ORDER BY GenreCount DESC;
 
 ---------------------------------------------------------------------------------
 
---Looking at the trends in genre popularity over different seasons in a year
+--Looking at the trends in genre popularity over different seasons in the year
 SELECT
     season AS Season,
     s.value AS Genre,
@@ -183,7 +224,7 @@ ORDER BY season, AnimeCount DESC;
 
 ---------------------------------------------------------------------------------
 
---Genre popularity over 'all time' - 1917 to 2023
+--Genre popularity over 'all time' - 1917 - 2023
 SELECT
     a.season,
     YEAR(a.start_date_formatted) AS Year,
@@ -197,16 +238,26 @@ ORDER BY a.season, Year, AnimeCount DESC;
 
 ---------------------------------------------------------------------------------
 
---Looking at genres gaining popularity based on animes that are not aired yet
+--Genres gaining popularity by looking at animes that are not yet aired
 SELECT
     s.value AS Genre,
     COUNT(*) AS AnimeCount
 FROM Anime..AnimeData a
 CROSS APPLY STRING_SPLIT(a.genres, '|') AS s
-WHERE a.genres IS NOT NULL
-    AND a.status = 'Not Yet Aired'
+WHERE a.genres IS NOT NULL AND a.status = 'Not Yet Aired'
 GROUP BY s.value
 ORDER BY AnimeCount DESC;
+
+---------------------------------------------------------------------------------
+
+--What is the most popular genre by rank?
+SELECT
+    TRIM(value) AS Genre,
+    AVG(popularity_rank) AS AveragePopularityRank
+FROM Anime..AnimeData
+CROSS APPLY STRING_SPLIT(genres, '|')
+GROUP BY TRIM(value)
+ORDER BY AveragePopularityRank DESC; 
 
 ---------------------------------------------------------------------------------
 
@@ -223,7 +274,7 @@ ORDER BY StudioCount DESC;
 
 ---------------------------------------------------------------------------------
 
---What is the most popular studio in the top 50 highest rated anime?
+--What is the most popular studio in the top 50 rated anime?
 WITH Top50Anime AS (
     SELECT TOP 50 title, score, studios
     FROM Anime..AnimeData
@@ -245,24 +296,24 @@ ORDER BY StudioCount DESC;
 
 --Finding which studio has the highest average ratings
 WITH StudioData AS (
-    SELECT
+    SELECT DISTINCT
         s.value AS Studio,
-        ROUND(CAST(score AS decimal(5, 2)), 2) AS Rating
+        AVG(CAST(score AS decimal(5, 2))) AS AverageRating
     FROM Anime..AnimeData a
     CROSS APPLY STRING_SPLIT(a.studios, '|') AS s
     WHERE ISNUMERIC(score) = 1
+    GROUP BY s.value
 )
 
 SELECT
     Studio,
-    Rating AS AverageRating
+    ROUND(AverageRating, 2) AS AverageRating
 FROM StudioData
-GROUP BY Studio, Rating
 ORDER BY AverageRating DESC;
 
 ---------------------------------------------------------------------------------
 
---Looking at which genre attracts most user engagment based on the plan to watch count
+--Looking at which genre attracts the most user engagement based on the plan to watch count
 WITH Genre AS (
     SELECT
         s.value AS Genre,
@@ -286,3 +337,16 @@ SELECT TOP 10 title, plan_to_watch_count
 FROM Anime..AnimeData
 WHERE status = 'Not Yet Aired'
 ORDER BY plan_to_watch_count DESC;
+
+---------------------------------------------------------------------------------
+
+--Finding which genre historically gets the highest ratings
+SELECT TOP 1 Genre, AVG(CAST(score AS FLOAT)) AS AvgRating
+FROM (
+    SELECT value AS Genre, score
+    FROM Anime..AnimeData
+    CROSS APPLY STRING_SPLIT(genres, '|')
+    WHERE genres IS NOT NULL AND ISNUMERIC(score) = 1
+) AS GenreSplit
+GROUP BY Genre
+ORDER BY AvgRating DESC;
