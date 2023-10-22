@@ -7,7 +7,7 @@ Through this all-around analysis, I aim to provide valuable insights for anime e
 
 Below are links to everything related to this project:
 * [Raw Datasets used](https://drive.google.com/drive/folders/1HFwRFJPFdN_aFQiVnLPH9idltYjHtbEy?usp=share_link)
-* [SQL Process and Query Analysis](https://github.com/naviubhi/MyAnimeList-SQL-Project/blob/main/Anime%20Data%20Cleaning%20%26%20Analysis)
+* [SQL Cleaning Process and Query Analysis](https://github.com/naviubhi/MyAnimeList-SQL-Project/blob/main/Anime%20Data%20Cleaning%20%26%20Analysis)
 * [Interactive Tableau Dashboard](https://public.tableau.com/app/profile/navi1382/viz/MyAnimeListAnalysisProject/MyAnimeListDashboard)
 * [Project Analysis and Finding](https://medium.com/@naviubhi29/data-analysis-and-visualization-on-myanimelist-data-71129f499d7a)
 
