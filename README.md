@@ -1,4 +1,7 @@
 # MyAnimeList SQL Project
+
+For this project, I will be using the [“MyAnimeList Dataset”](https://www.kaggle.com/datasets/svanoo/myanimelist-dataset) found on Kaggle.
+
 The objective of this project is to leverage SQL for a comprehensive exploration of the MyAnimeList dataset. Ultimately, I will be extracting meaningful insights and presenting them in an engaging and interactive dashboard on Tableau.
 
 The analysis explores anime genres' impact on user engagement, uncovers seasonal trends in releases, assesses the performance of studios, and examines user engagement behavior in relation to anime popularity.
